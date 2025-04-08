@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  api:
+    build: ./api
+    container_name: api
+    ports:
+      - "8082:8080"
+    environment:
+      - API_KEY=my-secret-api-key-1234
+      - DB_PATH=snippets.db  # read-only SQLite일 경우, file:../snippets.db?mode=ro 사용 가능
+    volumes:
+      - ./data/snippets.db:/app/snippets.db  # sqlite 위치는 DB_PATH랑 맞춰주세요
+    networks:
+      - app-net
+
+  nginx:
+    build: ./nginx
+    container_name: nginx-proxy
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
+      - bytestash
+    networks:
+      - app-net
+
+  bytestash:
+    image: ghcr.io/jordan-dalby/bytestash:latest
+    container_name: bytestash-ui
+    ports:
+      - "5050:5000"
+    environment:
+      - API_SERVER_URL=http://nginx/api
+      - JWT_SECRET=my-secret-key
+      - TOKEN_EXPIRY=24h
+      - ALLOW_NEW_ACCOUNTS=true
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
+
